@@ -1,0 +1,7 @@
+fastapi==0.85.0
+numpy==1.21.5
+opencv_python==4.6.0.66
+psycopg2==2.9.3
+psycopg2_binary==2.9.3
+python-dotenv==0.21.0
+uvicorn==0.18.3
