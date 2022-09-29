@@ -1,6 +1,6 @@
 import os
 # carregando as environments do .env
-import src.env
+from src import env
 import uvicorn
 
 # usado pra setar a porta
