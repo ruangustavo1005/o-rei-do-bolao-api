@@ -1,17 +1,17 @@
 from fastapi import FastAPI, Response
-import src.status
-import src.pontuacao
+from src.status import run as status
+from src.pontuacao import run as pontuacao
 
 app = FastAPI()
 
 @app.get('/')
-def root():
-  return src.status.run()
+def root_():
+  return status()
 
 @app.get('/status')
-def status():
-  return src.status.run()
+def status_():
+  return status()
 
 @app.get('/pontuacao/{camera_numero}')
-async def pontuacao(camera_numero: int, response: Response):
-  return await src.pontuacao.run(camera_numero, response)
+async def pontuacao_(camera_numero: int, response: Response):
+  return await pontuacao(camera_numero, response)
