@@ -1,0 +1,24 @@
+version: "3.7"
+services:
+  python:
+    container_name: python_container
+    image: "o-rei-do-bolao/python:latest"
+    build: .
+    environment:
+      DB_HOST: "postgres"
+      DB_PORT: "5432"
+      DB_USER: "postgres"
+      DB_PASSWORD: "me_mude"
+      DB_NAME: "o_rei_do_bolao_db"
+    ports:
+      - "8080:80"
+  postgres:
+    container_name: postgres_container
+    image: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-me_mude}
+    volumes:
+      - ./scripts/dump.sql:/docker-entrypoint-initdb.d/dump.sql
+    ports:
+      - "5432:5432"

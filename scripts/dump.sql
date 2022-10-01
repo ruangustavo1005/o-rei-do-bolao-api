@@ -1,0 +1,1 @@
+CREATE DATABASE o_rei_do_bolao;
