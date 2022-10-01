@@ -20,6 +20,11 @@ async def run(camera_numero: int, response: Response):
     return "é necessário configurar uma agulha para cada pino da camera %s antes de consultar a pontuação" % (camera_numero)
   
   imagemBase = cv2.imread('cancha.png', cv2.IMREAD_GRAYSCALE)
+  if (camera_numero == 1):
+    imagemBase = cv2.imread('cancha-1_.jpg', cv2.IMREAD_GRAYSCALE)
+  elif (camera_numero == 2):
+    imagemBase = cv2.imread('cancha-2_.jpg', cv2.IMREAD_GRAYSCALE)
+
   imagem = await redimensiona_mantendo_proporcoes(imagemBase)
   quantidade_pinos_levantados = await contabiliza_pinos(imagem, configuracoes_pinos)
 
@@ -62,7 +67,7 @@ async def redimensiona_mantendo_proporcoes(imagem_original):
   
   if (maxDimensao > DIMENSAO_MAXIMA_ACEITA):
     mdc = numpy.gcd(originalWidth, originalHeight)
-    fatorMultiplicacao = int(DIMENSAO_MAXIMA_ACEITA / (maxDimensao / mdc))
+    fatorMultiplicacao = DIMENSAO_MAXIMA_ACEITA / (maxDimensao / mdc)
     targetWidth = int(originalWidth  / mdc * fatorMultiplicacao)
     targetHeight = int(originalHeight / mdc * fatorMultiplicacao)
     
