@@ -1,4 +1,3 @@
-from math import gcd
 from fastapi import Response, status
 from fastapi.responses import JSONResponse
 import src.db as db
