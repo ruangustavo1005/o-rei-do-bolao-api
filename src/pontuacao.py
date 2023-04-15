@@ -6,76 +6,76 @@ import cv2
 DIMENSAO_MAXIMA_ACEITA = 800
 QUANTIDADE_TOTAL_PINOS = 9
 
-async def run(camera_numero: int, response: Response):
-  if (camera_numero < 1 or camera_numero > 4):
+async def run(cameraNumero: int, response: Response):
+  if (cameraNumero < 1 or cameraNumero > 4):
     response.status_code = status.HTTP_400_BAD_REQUEST
     return "número da câmera informado inválido"
 
-  configuracoes_pinos = await get_config_pinos(camera_numero)
+  configuracoesPinos = await getConfigPinos(cameraNumero)
 
-  if (len(configuracoes_pinos) < QUANTIDADE_TOTAL_PINOS):
+  if (len(configuracoesPinos) < QUANTIDADE_TOTAL_PINOS):
     response.status_code = status.HTTP_428_PRECONDITION_REQUIRED
-    return "é necessário configurar uma agulha para cada pino da camera %s antes de consultar a pontuação" % (camera_numero)
+    return "é necessário configurar uma agulha para cada pino da camera %s antes de consultar a pontuação" % (cameraNumero)
   
   frame = False
-  endpoint_RTSP = await get_endpoint_rtsp_camera(camera_numero)
+  endpointRTSP = await getEndpointRtspCamera(cameraNumero)
   
-  if endpoint_RTSP == '':
+  if endpointRTSP == '':
     response.status_code = status.HTTP_428_PRECONDITION_REQUIRED
-    return "é necessário configurar o endpoint RTSP para a câmera %s" % (camera_numero)
+    return "é necessário configurar o endpoint RTSP para a câmera %s" % (cameraNumero)
   
-  cap = cv2.VideoCapture(endpoint_RTSP)
+  cap = cv2.VideoCapture(endpointRTSP)
   if cap.isOpened():
     ret, frame = cap.read()
     frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
   else:
     response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
-    return "não foi possível recuperar o vídeo da câmera %s pelo endpoint RTSP %s" % (camera_numero, endpoint_RTSP)
+    return "não foi possível recuperar o vídeo da câmera %s pelo endpoint RTSP %s" % (cameraNumero, endpointRTSP)
   
   # imagemBase = cv2.imread('img/cancha.JPG', cv2.IMREAD_GRAYSCALE)
-  # if (camera_numero == 1):
+  # if (cameraNumero == 1):
   #   imagemBase = cv2.imread('img/cancha-1_.JPG', cv2.IMREAD_GRAYSCALE)
-  # elif (camera_numero == 2):
+  # elif (cameraNumero == 2):
   #   imagemBase = cv2.imread('img/cancha-2_.JPG', cv2.IMREAD_GRAYSCALE)
 
-  imagem = await redimensiona_mantendo_proporcoes(frame)
-  quantidade_pinos_levantados = await contabiliza_pinos(imagem, configuracoes_pinos)
+  imagem = await redimensionaMantendoProporcoes(frame)
+  quantidadePinosLevantados = await contabilizaPinos(imagem, configuracoesPinos)
 
-  return QUANTIDADE_TOTAL_PINOS - quantidade_pinos_levantados
+  return QUANTIDADE_TOTAL_PINOS - quantidadePinosLevantados
 
-async def contabiliza_pinos(imagem, configuracoes_pinos):
+async def contabilizaPinos(imagem, configuracoesPinos):
   retangulos = []
 
-  for (agulha, x_agulha, y_agulha, margem_erro, percentual_match) in configuracoes_pinos:
+  for (agulha, xAgulha, yAgulha, margemErro, percentualMatch) in configuracoesPinos:
     match = cv2.matchTemplate(imagem, agulha, cv2.TM_CCOEFF_NORMED)
     
-    height_agulha, width_agulha = agulha.shape
-    height_agulha, width_agulha = (int(height_agulha), int(width_agulha))
+    heightAgulha, widthAgulha = agulha.shape
+    heightAgulha, widthAgulha = (int(heightAgulha), int(widthAgulha))
 
-    x_maximo = x_agulha + margem_erro
-    x_minimo = x_agulha - margem_erro
-    y_maximo = y_agulha + margem_erro
-    y_minimo = y_agulha - margem_erro
+    xMaximo = xAgulha + margemErro
+    xMinimo = xAgulha - margemErro
+    yMaximo = yAgulha + margemErro
+    yMinimo = yAgulha - margemErro
 
-    y_loc, x_loc = numpy.where(match >= percentual_match)
+    y_loc, x_loc = numpy.where(match >= percentualMatch)
     for (x, y) in zip(x_loc, y_loc):
       x, y = (int(x), int(y))
-      if ((x >= x_minimo and x <= x_maximo) or (y >= y_minimo and y <= y_maximo)):
-        retangulos.append([x, y, width_agulha, height_agulha])
+      if ((x >= xMinimo and x <= xMaximo) or (y >= yMinimo and y <= yMaximo)):
+        retangulos.append([x, y, widthAgulha, heightAgulha])
 
   retangulos_agrupados = cv2.groupRectangles(retangulos, 1)
 
-  for (x, y, wei, hei) in retangulos_agrupados[0]:
-    cv2.rectangle(imagem, (x, y), (x + wei, y + hei), (255, 0, 0,), 2)
+  # for (x, y, wei, hei) in retangulos_agrupados[0]:
+  #   cv2.rectangle(imagem, (x, y), (x + wei, y + hei), (255, 0, 0,), 2)
 
-  cv2.imshow('imagem', imagem)
-  cv2.waitKey()
-  cv2.destroyAllWindows()
+  # cv2.imshow('imagem', imagem)
+  # cv2.waitKey()
+  # cv2.destroyAllWindows()
 
   return len(retangulos_agrupados[0])
 
-async def redimensiona_mantendo_proporcoes(imagem_original):
-  originalHeight, originalWidth = imagem_original.shape
+async def redimensionaMantendoProporcoes(imagemOriginal):
+  originalHeight, originalWidth = imagemOriginal.shape
   maxDimensao = numpy.max([originalHeight, originalWidth])
   
   if (maxDimensao > DIMENSAO_MAXIMA_ACEITA):
@@ -84,11 +84,11 @@ async def redimensiona_mantendo_proporcoes(imagem_original):
     targetWidth = int(originalWidth  / mdc * fatorMultiplicacao)
     targetHeight = int(originalHeight / mdc * fatorMultiplicacao)
     
-    return cv2.resize(imagem_original, (targetWidth, targetHeight))
+    return cv2.resize(imagemOriginal, (targetWidth, targetHeight))
   
-  return imagem_original
+  return imagemOriginal
 
-async def get_config_pinos(camera_numero: int):
+async def getConfigPinos(cameraNumero: int):
   query = db.getConnection().cursor()
   query.execute("""
 SELECT pin.numero,
@@ -112,26 +112,26 @@ SELECT pin.numero,
     ON ger.id = 1
  WHERE cam.numero = %s
  ORDER BY pin.numero
-""", [camera_numero])
+""", [cameraNumero])
 
   results = []
   fetch = query.fetchone()
   while fetch:
-    numero, x, y, margem_erro, percentual_match, imagem = fetch
+    numero, x, y, margemErro, percentualMatch, imagem = fetch
     imagem = cv2.imdecode(numpy.asarray(bytearray(imagem), dtype=numpy.uint8), cv2.IMREAD_GRAYSCALE)
-    percentual_match = percentual_match / 100
-    results.insert(numero, [imagem, x, y, margem_erro, percentual_match])
+    percentualMatch = percentualMatch / 100
+    results.insert(numero, [imagem, x, y, margemErro, percentualMatch])
     fetch = query.fetchone()
 
   return results
 
-async def get_endpoint_rtsp_camera(camera_numero: int):
+async def getEndpointRtspCamera(cameraNumero: int):
   query = db.getConnection().cursor()
   query.execute("""
 SELECT endpoint_rtsp
   FROM configuracao_camera
  WHERE numero = %s
-""", [camera_numero])
+""", [cameraNumero])
 
   endpoint_rtsp = ''
   fetch = query.fetchone()
