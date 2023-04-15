@@ -1,5 +1,4 @@
 from fastapi import Response, status
-from fastapi.responses import JSONResponse
 import src.db as db
 import numpy
 import cv2
@@ -18,13 +17,28 @@ async def run(camera_numero: int, response: Response):
     response.status_code = status.HTTP_428_PRECONDITION_REQUIRED
     return "é necessário configurar uma agulha para cada pino da camera %s antes de consultar a pontuação" % (camera_numero)
   
-  imagemBase = cv2.imread('cancha.png', cv2.IMREAD_GRAYSCALE)
-  if (camera_numero == 1):
-    imagemBase = cv2.imread('cancha-1_.jpg', cv2.IMREAD_GRAYSCALE)
-  elif (camera_numero == 2):
-    imagemBase = cv2.imread('cancha-2_.jpg', cv2.IMREAD_GRAYSCALE)
+  frame = False
+  endpoint_RTSP = await get_endpoint_rtsp_camera(camera_numero)
+  
+  if endpoint_RTSP == '':
+    response.status_code = status.HTTP_428_PRECONDITION_REQUIRED
+    return "é necessário configurar o endpoint RTSP para a câmera %s" % (camera_numero)
+  
+  cap = cv2.VideoCapture(endpoint_RTSP)
+  if cap.isOpened():
+    ret, frame = cap.read()
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+  else:
+    response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+    return "não foi possível recuperar o vídeo da câmera %s pelo endpoint RTSP %s" % (camera_numero, endpoint_RTSP)
+  
+  # imagemBase = cv2.imread('img/cancha.JPG', cv2.IMREAD_GRAYSCALE)
+  # if (camera_numero == 1):
+  #   imagemBase = cv2.imread('img/cancha-1_.JPG', cv2.IMREAD_GRAYSCALE)
+  # elif (camera_numero == 2):
+  #   imagemBase = cv2.imread('img/cancha-2_.JPG', cv2.IMREAD_GRAYSCALE)
 
-  imagem = await redimensiona_mantendo_proporcoes(imagemBase)
+  imagem = await redimensiona_mantendo_proporcoes(frame)
   quantidade_pinos_levantados = await contabiliza_pinos(imagem, configuracoes_pinos)
 
   return QUANTIDADE_TOTAL_PINOS - quantidade_pinos_levantados
@@ -110,3 +124,18 @@ SELECT pin.numero,
     fetch = query.fetchone()
 
   return results
+
+async def get_endpoint_rtsp_camera(camera_numero: int):
+  query = db.getConnection().cursor()
+  query.execute("""
+SELECT endpoint_rtsp
+  FROM configuracao_camera
+ WHERE numero = %s
+""", [camera_numero])
+
+  endpoint_rtsp = ''
+  fetch = query.fetchone()
+  if fetch:
+    endpoint_rtsp, = fetch
+
+  return endpoint_rtsp
